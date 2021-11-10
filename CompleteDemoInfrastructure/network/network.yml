@@ -1,4 +1,4 @@
-Description: Israel Andrade - CloudFormation script to create infra for Udacity Cloud DevOps Nanodegree
+Description: Udacity Infra - Networking - Israel Andrade @ 2021
 
 Parameters:
   EnvironmentName:
