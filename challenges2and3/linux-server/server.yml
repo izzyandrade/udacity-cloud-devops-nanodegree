@@ -1,0 +1,57 @@
+Description: Linux Server Infrastructure for Challenge 3 on Udacity Cloud DevOps Nanodegree
+
+Parameters:
+  EnvironmentName:
+    Description: An Environment Name that will be prefixed to resources
+    Type: String
+
+Resources:
+  IAMRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref IAMRole
+  WebServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow http to client host on Web Servers
+      VpcId:
+        Fn::ImportValue: !Sub '${EnvironmentName}-VPCID'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          FromPort: -1
+          ToPort: -1
+          CidrIp: 0.0.0.0/0
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-01cc34ab2709337aa
+      InstanceType: t3.micro
+      IamInstanceProfile: !Ref InstanceProfile
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: 'true'
+          DeviceIndex: '0'
+          GroupSet:
+            - Ref: 'WebServerSecurityGroup'
+          SubnetId:
+            Fn::ImportValue:
+              Fn::Sub: '${EnvironmentName}-PVT-NET'

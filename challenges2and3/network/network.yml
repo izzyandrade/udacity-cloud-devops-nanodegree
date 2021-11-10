@@ -119,3 +119,22 @@ Resources:
     Properties:
       RouteTableId: !Ref PrivateRouteTable
       SubnetId: !Ref PrivateSubnet
+
+Outputs:
+  VPC:
+    Description: The value for VPC ID
+    Value: !Ref VPC
+    Export:
+      Name: !Sub ${EnvironmentName}-VPCID
+
+  PublicSubnet:
+    Description: The public subnet
+    Value: !Ref PublicSubnet
+    Export:
+      Name: !Sub ${EnvironmentName}-PUB-NET
+
+  PrivateSubnet:
+    Description: The private subnet
+    Value: !Ref PrivateSubnet
+    Export:
+      Name: !Sub ${EnvironmentName}-PVT-NET

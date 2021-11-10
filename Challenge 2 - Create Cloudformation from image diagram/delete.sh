@@ -1,1 +1,0 @@
-aws cloudformation delete-stack --stack-name challenge2infra --region us-east-1
