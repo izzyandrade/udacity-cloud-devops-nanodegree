@@ -5,6 +5,10 @@ Parameters:
     Description: An Environment Name that will be prefixed to resources
     Type: String
 
+  ImageId:
+    Description: The image Id for the EC2 instance
+    Type: String
+
 Resources:
   # WEB SERVER AND SECURITY GROUP
 
@@ -61,8 +65,7 @@ Resources:
           systemctl start apache2.service
           cd /var/www/html
           echo "Udagram Web Server Up and Running!" > index.html
-      ImageId: ami-00ddb0e5626798373
-      KeyName: VocareumKey2
+      ImageId: !Ref ImageId
       SecurityGroups:
         - Ref: WebServerSecurityGroup
       InstanceType: t3.small

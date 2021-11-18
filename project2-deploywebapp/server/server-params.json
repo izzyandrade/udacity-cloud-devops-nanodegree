@@ -2,5 +2,9 @@
   {
     "ParameterKey": "EnvironmentName",
     "ParameterValue": "Project2Infra"
+  },
+  {
+    "ParameterKey": "ImageId",
+    "ParameterValue": "ami-00ddb0e5626798373"
   }
 ]
