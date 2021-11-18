@@ -10,4 +10,4 @@
 
 ### How to access project:
 
-Load balancer address output: <a href="http://proje-LoadB-UYK9C86H76OS-601068531.us-east-1.elb.amazonaws.com/index.html">Link to website</a>
+Load balancer address output: <a href="http://proje-LoadB-UYK9C86H76OS-601068531.us-east-1.elb.amazonaws.com">Link to website</a>
