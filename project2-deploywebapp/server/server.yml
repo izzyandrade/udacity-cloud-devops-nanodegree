@@ -1,4 +1,4 @@
-Description: Udacity Infra - Servers - Israel Andrade @ 2021
+Description: Udacity Project 2 Infrastructure - Servers - Israel Andrade @ 2021
 
 Parameters:
   EnvironmentName:
@@ -6,26 +6,14 @@ Parameters:
     Type: String
 
 Resources:
-  LBSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
+  ProfileWithRolesForOurApp:
+    Type: AWS::IAM::InstanceProfile
     Properties:
-      GroupDescription: Allow http to client host on Load Balancer
-      VpcId:
-        Fn::ImportValue: !Sub '${EnvironmentName}-VPCID'
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: 0.0.0.0/0
-      SecurityGroupEgress:
-        - IpProtocol: tcp
-          FromPort: 80
-          ToPort: 80
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
-          FromPort: 8080
-          ToPort: 8080
-          CidrIp: 0.0.0.0/0
+      Path: /
+      Roles:
+        - UdacityS3ReadOnlyEC2
+
+  # WEB SERVER AND SECURITY GROUP
 
   WebServerSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -39,10 +27,6 @@ Resources:
           ToPort: 80
           CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
-          FromPort: 8080
-          ToPort: 8080
-          CidrIp: 0.0.0.0/0
-        - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
           CidrIp: 0.0.0.0/0
@@ -51,6 +35,28 @@ Resources:
           FromPort: 0
           ToPort: 65535
           CidrIp: 0.0.0.0/0
+
+  LoadBalancerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow http to client host on Web Servers
+      VpcId:
+        Fn::ImportValue: !Sub '${EnvironmentName}-VPCID'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+
   WebAppLaunchConfig:
     Type: AWS::AutoScaling::LaunchConfiguration
     Properties:
@@ -61,7 +67,7 @@ Resources:
           apt-get install apache2 -y
           systemctl start apache2.service
           cd /var/www/html
-          echo "Udacity Demo Web Server Up and Running!" > index.html
+          echo "Udagram Web Server Up and Running!" > index.html
       ImageId: ami-00ddb0e5626798373
       KeyName: VocareumKey2
       SecurityGroups:
@@ -71,28 +77,19 @@ Resources:
         - DeviceName: '/dev/sdk'
           Ebs:
             VolumeSize: '10'
-  WebAppGroup:
-    Type: AWS::AutoScaling::AutoScalingGroup
-    Properties:
-      VPCZoneIdentifier:
-        - Fn::ImportValue: !Sub '${EnvironmentName}-PVT-NETS'
-      LaunchConfigurationName:
-        Ref: WebAppLaunchConfig
-      MinSize: '3'
-      MaxSize: '5'
-      HealthCheckGracePeriod: 60
-      HealthCheckType: ELB
-      TargetGroupARNs:
-        - Ref: WebAppTargetGroup
-  WebAppLB:
+
+  # LOAD BALANCER AND SECURITY GROUP
+
+  LoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
       Subnets:
         - Fn::ImportValue: !Sub '${EnvironmentName}-PUB1-SN'
         - Fn::ImportValue: !Sub '${EnvironmentName}-PUB2-SN'
       SecurityGroups:
-        - Ref: LBSecurityGroup
-  Listener:
+        - Ref: LoadBalancerSecurityGroup
+
+  LBListener:
     Type: AWS::ElasticLoadBalancingV2::Listener
     Properties:
       DefaultActions:
@@ -100,10 +97,11 @@ Resources:
           TargetGroupArn:
             Ref: WebAppTargetGroup
       LoadBalancerArn:
-        Ref: WebAppLB
+        Ref: LoadBalancer
       Port: '80'
       Protocol: HTTP
-  ALBListenerRule:
+
+  LBListenerRule:
     Type: AWS::ElasticLoadBalancingV2::ListenerRule
     Properties:
       Actions:
@@ -112,12 +110,13 @@ Resources:
       Conditions:
         - Field: path-pattern
           Values: [/]
-      ListenerArn: !Ref 'Listener'
+      ListenerArn: !Ref 'LBListener'
       Priority: 1
 
   WebAppTargetGroup:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
     Properties:
+      TargetType: instance
       HealthCheckIntervalSeconds: 10
       HealthCheckPath: /
       HealthCheckProtocol: HTTP
@@ -129,3 +128,43 @@ Resources:
       VpcId:
         Fn::ImportValue:
           Fn::Sub: '${EnvironmentName}-VPCID'
+
+  WebAppGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      VPCZoneIdentifier:
+        - Fn::ImportValue: !Sub '${EnvironmentName}-PVT-NETS'
+      LaunchConfigurationName:
+        Ref: WebAppLaunchConfig
+      MinSize: '1'
+      MaxSize: '2'
+      HealthCheckGracePeriod: 60
+      HealthCheckType: ELB
+      TargetGroupARNs:
+        - Ref: WebAppTargetGroup
+
+  WebAppLaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          apt-get update -y
+          apt-get install apache2 -y
+          systemctl start apache2.service
+          cd /var/www/html
+          echo "Udacity Demo Web Server Up and Running!" > index.html
+      ImageId: ami-0279c3b3186e54acd
+      SecurityGroups:
+        - Ref: WebServerSecurityGroup
+      InstanceType: t3.small
+      BlockDeviceMappings:
+        - DeviceName: '/dev/sdk'
+          Ebs:
+            VolumeSize: '10'
+
+Outputs:
+
+  AppURL:
+    Value: !Join [ "", [ "http://", !GetAtt LoadBalancer.DNSName ] ]
+    Description: Link to the app
