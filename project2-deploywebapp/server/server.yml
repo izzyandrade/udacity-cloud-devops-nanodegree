@@ -6,13 +6,6 @@ Parameters:
     Type: String
 
 Resources:
-  ProfileWithRolesForOurApp:
-    Type: AWS::IAM::InstanceProfile
-    Properties:
-      Path: /
-      Roles:
-        - UdacityS3ReadOnlyEC2
-
   # WEB SERVER AND SECURITY GROUP
 
   WebServerSecurityGroup:
